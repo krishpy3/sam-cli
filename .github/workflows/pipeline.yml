@@ -17,6 +17,8 @@ jobs:
   build-and-deploy-feature:
     # if: startsWith(github.ref, 'refs/heads/feature')
     runs-on: ubuntu-latest
+    env:
+      SAM_CLI_TELEMETRY: 0
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v4
@@ -25,12 +27,12 @@ jobs:
       - uses: aws-actions/setup-sam@v2
         with:
           use-installer: true
-      - run: sam build --template ${SAM_TEMPLATE}
+      - run: |
+          echo $SAM_CLI_TELEMETRY
+          sam build --template ${SAM_TEMPLATE}
 
       - name: Assume the testing pipeline user role
         uses: aws-actions/configure-aws-credentials@v1-node16
-        env:
-          SAM_CLI_TELEMETRY: 0
         with:
           aws-access-key-id: ${{ env.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ env.AWS_SECRET_ACCESS_KEY }}

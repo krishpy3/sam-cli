@@ -37,10 +37,6 @@ jobs:
           aws-access-key-id: ${{ env.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ env.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ env.REGION }}
-          role-to-assume: ${{ env.PIPELINE_EXECUTION_ROLE }}
-          role-session-name: feature-deployment
-          role-duration-seconds: 3600
-          role-skip-session-tagging: true
 
       - name: Deploy to feature stack in the testing account
         shell: bash
@@ -49,5 +45,4 @@ jobs:
             --capabilities CAPABILITY_IAM \
             --region ${REGION} \
             --s3-bucket ${ARTIFACTS_BUCKET} \
-            --no-fail-on-empty-changeset \
-            --role-arn ${CLOUDFORMATION_EXECUTION_ROLE}
+            --no-fail-on-empty-changeset

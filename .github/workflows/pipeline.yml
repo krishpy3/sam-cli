@@ -6,7 +6,7 @@ on:
 env:
   AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
   AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-  SAM_TEMPLATE: template.yaml
+  SAM_TEMPLATE: template.yml
   STACK_NAME: sam-app
   PIPELINE_EXECUTION_ROLE: arn:aws:iam::037285738788:role/aws-sam-cli-managed-dev-pipel-PipelineExecutionRole-gRlUAygqnAzj
   CLOUDFORMATION_EXECUTION_ROLE: arn:aws:iam::037285738788:role/aws-sam-cli-managed-dev-p-CloudFormationExecutionRo-9JqNMhGGUbC7

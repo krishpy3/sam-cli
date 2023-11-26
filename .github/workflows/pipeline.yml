@@ -11,7 +11,7 @@ env:
   PIPELINE_EXECUTION_ROLE: arn:aws:iam::037285738788:role/aws-sam-cli-managed-dev-pipel-PipelineExecutionRole-gRlUAygqnAzj
   CLOUDFORMATION_EXECUTION_ROLE: arn:aws:iam::037285738788:role/aws-sam-cli-managed-dev-p-CloudFormationExecutionRo-9JqNMhGGUbC7
   ARTIFACTS_BUCKET: aws-sam-cli-managed-dev-pipeline-r-artifactsbucket-xtwfiicdozyt
-  REGION: us-easst-1
+  REGION: us-east-1
 
 jobs:
   build-and-deploy-feature:

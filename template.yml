@@ -9,9 +9,7 @@ Resources:
     Properties:
       Handler: myDateTimeFunction.handler
       Runtime: python3.10
-      # Instructs your myDateTimeFunction is published to an alias named "live".
       AutoPublishAlias: live
-      # Grants this function permission to call lambda:InvokeFunction
       Policies:
         - Version: "2012-10-17"
           Statement:
@@ -20,9 +18,8 @@ Resources:
                 - "lambda:InvokeFunction"
               Resource: "*"
       DeploymentPreference:
-        # Specifies the deployment configuration
-        Type: Linear10PercentEvery1Minute
-        # Specifies Lambda functions for deployment lifecycle hooks
+        # Type: Linear10PercentEvery1Minute
+        Type: AllAtOnce
         Hooks:
           PreTraffic: !Ref beforeAllowTraffic
           PostTraffic: !Ref afterAllowTraffic
@@ -34,21 +31,18 @@ Resources:
       Handler: beforeAllowTraffic.handler
       Policies:
         - Version: "2012-10-17"
-          # Grants this function permission to call codedeploy:PutLifecycleEventHookExecutionStatus
           Statement:
             - Effect: "Allow"
               Action:
                 - "codedeploy:PutLifecycleEventHookExecutionStatus"
               Resource: !Sub "arn:aws:codedeploy:${AWS::Region}:${AWS::AccountId}:deploymentgroup:${ServerlessDeploymentApplication}/*"
         - Version: "2012-10-17"
-          # Grants this function permission to call lambda:InvokeFunction
           Statement:
             - Effect: "Allow"
               Action:
                 - "lambda:InvokeFunction"
               Resource: !Ref myDateTimeFunction.Version
       Runtime: python3.10
-      # Specifies the name of the Lambda hook function
       FunctionName: "CodeDeployHook_beforeAllowTraffic"
       DeploymentPreference:
         Enabled: false
@@ -57,7 +51,6 @@ Resources:
         Variables:
           NewVersion: !Ref myDateTimeFunction.Version
 
-  # Specifies the AfterAllowTraffic lifecycle hook Lambda function
   afterAllowTraffic:
     Type: AWS::Serverless::Function
     Properties:
@@ -65,20 +58,17 @@ Resources:
       Policies:
         - Version: "2012-10-17"
           Statement:
-            # Grants this function permission to call codedeploy:PutLifecycleEventHookExecutionStatus
             - Effect: "Allow"
               Action:
                 - "codedeploy:PutLifecycleEventHookExecutionStatus"
               Resource: !Sub "arn:aws:codedeploy:${AWS::Region}:${AWS::AccountId}:deploymentgroup:${ServerlessDeploymentApplication}/*"
         - Version: "2012-10-17"
           Statement:
-            # Grants this function permission to call lambda:InvokeFunction
             - Effect: "Allow"
               Action:
                 - "lambda:InvokeFunction"
               Resource: !Ref myDateTimeFunction.Version
       Runtime: python3.10
-      # Specifies the name of the Lambda hook function
       FunctionName: "CodeDeployHook_afterAllowTraffic"
       DeploymentPreference:
         Enabled: false

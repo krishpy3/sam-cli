@@ -33,7 +33,7 @@ def handler(event, context):
         response = lambda_client.invoke(**lambda_params)
         result = json.loads(response['Payload'].read())
 
-        print(f"Result: {json.dumps(result)}")
+        print(f"Result1: {json.dumps(result)}")
         print(f"statusCode: {result['statusCode']}")
 
         # Check if the status code returned by the updated function is 400

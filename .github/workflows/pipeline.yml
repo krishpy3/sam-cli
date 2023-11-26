@@ -1,0 +1,46 @@
+name: Pipeline
+
+on:
+  push:
+
+env:
+  AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+  AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+  SAM_TEMPLATE: template.yaml
+  STACK_NAME: sam-app
+  PIPELINE_EXECUTION_ROLE: arn:aws:iam::037285738788:role/aws-sam-cli-managed-dev-pipel-PipelineExecutionRole-gRlUAygqnAzj
+  CLOUDFORMATION_EXECUTION_ROLE: arn:aws:iam::037285738788:role/aws-sam-cli-managed-dev-p-CloudFormationExecutionRo-9JqNMhGGUbC7
+  ARTIFACTS_BUCKET: aws-sam-cli-managed-dev-pipeline-r-artifactsbucket-xtwfiicdozyt
+  REGION: us-easst-1
+
+jobs:
+  build-and-deploy-feature:
+    if: startsWith(github.ref, 'refs/heads/feature')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: aws-actions/setup-sam@v2
+        with:
+          use-installer: true
+      - run: sam build --template ${SAM_TEMPLATE}
+
+      - name: Assume the testing pipeline user role
+        uses: aws-actions/configure-aws-credentials@v1-node16
+        with:
+          aws-access-key-id: ${{ env.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ env.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.REGION }}
+          role-to-assume: ${{ env.PIPELINE_EXECUTION_ROLE }}
+          role-session-name: feature-deployment
+          role-duration-seconds: 3600
+          role-skip-session-tagging: true
+
+      - name: Deploy to feature stack in the testing account
+        shell: bash
+        run: |
+          sam deploy --stack-name $(echo ${GITHUB_REF##*/} | tr -cd '[a-zA-Z0-9-]') \
+            --capabilities CAPABILITY_IAM \
+            --region ${TESTING_REGION} \
+            --s3-bucket ${TESTING_ARTIFACTS_BUCKET} \
+            --no-fail-on-empty-changeset \
+            --role-arn ${TESTING_CLOUDFORMATION_EXECUTION_ROLE}

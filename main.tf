@@ -1,6 +1,5 @@
 provider "aws" {
-  region  = "us-east-1"
-  profile = "denis"
+  region = "us-east-1"
 }
 
 # s3 backend

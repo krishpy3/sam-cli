@@ -49,8 +49,8 @@ jobs:
                       "Properties": {
                           "Name": "MyLambdaFunction",
                           "Alias": 'live',
-                          "CurrentVersion": "${{ needs.build.outputs.old_version }}",
-                          "TargetVersion": "${{ needs.build.outputs.new_version }}"
+                          "CurrentVersion": ${{ needs.build.outputs.old_version }},
+                          "TargetVersion": ${{ needs.build.outputs.new_version }}
                       }
                   }
               }]

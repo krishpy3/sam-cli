@@ -65,5 +65,4 @@ def set_date_result(option='today'):
         'day': da,
         'year': y
     }
-
     return result

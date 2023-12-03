@@ -28,8 +28,8 @@ jobs:
           echo "TF_VAR_code_deploy_app=${CODEDEPLOY_APP}" >> $GITHUB_ENV
           echo "TF_VAR_code_deploy_group=${CODEDEPLOY_GROUP}" >> $GITHUB_ENV
 
-          - name: Check if lambda function alias exists
-          run: |
+      - name: Check if lambda function alias exists
+        run: |
           if aws lambda get-alias --function-name ${FUNCTION_NAME} --name live; then
           echo "Lambda function alias exists"
           else

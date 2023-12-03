@@ -18,25 +18,24 @@ jobs:
       # new_version: ${{ steps.new-version.outputs.new_version }}
       old_version: 8
       new_version: 9
-    if: false
     steps:
       - uses: actions/checkout@v4
-      - uses: hashicorp/setup-terraform@v3
-        with:
-          terraform_wrapper: false
-      - run: terraform init -no-color
-      - id: plan
-        run: terraform plan -no-color
-      - id: old-version
-        run: echo "old_version=$(terraform output -no-color current_version)" >> $GITHUB_OUTPUT
-      - id: apply
-        run: terraform apply -auto-approve -no-color
-      - id: new-version
-        run: echo "new_version=$(terraform output -no-color current_version)" >> $GITHUB_OUTPUT
-      - name: Echo both versions
-        run: |
-          echo "old_version=${{ steps.old-version.outputs.old_version }}"
-          echo "new_version=${{ steps.new-version.outputs.new_version }}"
+      # - uses: hashicorp/setup-terraform@v3
+      #   with:
+      #     terraform_wrapper: false
+      # - run: terraform init -no-color
+      # - id: plan
+      #   run: terraform plan -no-color
+      # - id: old-version
+      #   run: echo "old_version=$(terraform output -no-color current_version)" >> $GITHUB_OUTPUT
+      # - id: apply
+      #   run: terraform apply -auto-approve -no-color
+      # - id: new-version
+      #   run: echo "new_version=$(terraform output -no-color current_version)" >> $GITHUB_OUTPUT
+      # - name: Echo both versions
+      #   run: |
+      #     echo "old_version=${{ steps.old-version.outputs.old_version }}"
+      #     echo "new_version=${{ steps.new-version.outputs.new_version }}"
 
   deploy:
     needs: build

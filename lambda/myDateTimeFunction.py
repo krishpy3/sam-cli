@@ -54,7 +54,6 @@ def set_date_result(option='today'):
         d -= datetime.timedelta(days=1)
     elif option == 'tomorrow':
         d += datetime.timedelta(days=1)
-
     mo = d.month
     da = d.day
     y = d.year

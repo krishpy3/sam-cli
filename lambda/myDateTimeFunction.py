@@ -67,6 +67,3 @@ def set_date_result(option='today'):
     }
 
     return result
-
-
-print(handler({"body": '{"option": "time", "period": "yesterda"}'}, {}))

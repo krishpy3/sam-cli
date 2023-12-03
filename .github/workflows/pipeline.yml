@@ -17,15 +17,17 @@ jobs:
     outputs:
       old_version: ${{ steps.versions.outputs.old_version }}
       new_version: ${{ steps.versions.outputs.new_version }}
-    env:
-      TF_VAR_function_name: ${{ env.FUNCTION_NAME }}
-      TF_VAR_code_deploy_app_name: ${{ env.CODEDEPLOY_APP }}
-      TF_VAR_deployment_group_name: ${{ env.CODEDEPLOY_GROUP }}
     steps:
       - uses: actions/checkout@v4
       - uses: hashicorp/setup-terraform@v3
         with:
           terraform_wrapper: false
+      - name: Setting up variables
+        run: |
+          echo "TF_VAR_function_name=$(FUNCTION_NAME)" >> $GITHUB_ENV
+          echo "TF_VAR_code_deploy_app=$(CODEDEPLOY_APP)" >> $GITHUB_ENV
+          echo "TF_VAR_code_deploy_group=$(CODEDEPLOY_GROUP)" >> $GITHUB_ENV
+
       - run: terraform init -no-color
       - name: Check if lambda function alias exists
         run: |

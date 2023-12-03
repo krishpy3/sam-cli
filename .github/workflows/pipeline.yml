@@ -15,7 +15,7 @@ jobs:
       new_version: ${{ steps.new-version.outputs.new_version }}
     steps:
       - uses: actions/checkout@v4
-      - uses: hashicorp/setup-teraform@v3
+      - uses: hashicorp/setup-terraform@v3
         with:
           terraform_wrapper: false
       - id: plan

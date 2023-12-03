@@ -18,6 +18,7 @@ jobs:
       - uses: hashicorp/setup-terraform@v3
         with:
           terraform_wrapper: false
+      - run: terraform init -no-color
       - id: plan
         run: terraform plan -no-color
       - id: old-version

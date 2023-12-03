@@ -48,7 +48,7 @@ jobs:
                       "Type": "AWS::Lambda::Function",
                       "Properties": {
                           "Name": "MyLambdaFunction",
-                          "Alias": 'live',
+                          "Alias": "live",
                           "CurrentVersion": ${{ needs.build.outputs.old_version }},
                           "TargetVersion": ${{ needs.build.outputs.new_version }}
                       }

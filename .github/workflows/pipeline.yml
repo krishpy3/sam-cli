@@ -24,19 +24,20 @@ jobs:
           terraform_wrapper: false
       - name: Setting up variables
         run: |
-          echo "TF_VAR_function_name=$(FUNCTION_NAME)" >> $GITHUB_ENV
-          echo "TF_VAR_code_deploy_app=$(CODEDEPLOY_APP)" >> $GITHUB_ENV
-          echo "TF_VAR_code_deploy_group=$(CODEDEPLOY_GROUP)" >> $GITHUB_ENV
+          echo "TF_VAR_function_name=${FUNCTION_NAME}" >> $GITHUB_ENV
+          echo "TF_VAR_code_deploy_app=${CODEDEPLOY_APP}" >> $GITHUB_ENV
+          echo "TF_VAR_code_deploy_group=${CODEDEPLOY_GROUP}" >> $GITHUB_ENV
+
+          - name: Check if lambda function alias exists
+          run: |
+          if aws lambda get-alias --function-name ${FUNCTION_NAME} --name live; then
+          echo "Lambda function alias exists"
+          else
+          echo "Lambda function alias does not exist"
+          exit 1
+          fi
 
       - run: terraform init -no-color
-      - name: Check if lambda function alias exists
-        run: |
-          if aws lambda get-alias --function-name $(FUNCTION_NAME) --name live; then
-            echo "Lambda function alias exists"
-          else
-            echo "Lambda function alias does not exist"
-            exit 1
-          fi
 
       - id: plan
         run: terraform plan -no-color

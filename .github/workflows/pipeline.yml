@@ -22,11 +22,15 @@ jobs:
       - id: plan
         run: terraform plan -no-color
       - id: old-version
-        run: echo "old_version=`terraform output -no-color current_version`" >> $GITHUB_OUTPUT
+        run: echo "old_version=${terraform output -no-color current_version}" >> $GITHUB_OUTPUT
       - id: apply
         run: terraform apply -auto-approve -no-color
       - id: new-version
-        run: echo "new_version=`terraform output -no-color current_version`" >> $GITHUB_OUTPUT
+        run: echo "new_version=${terraform output -no-color current_version}" >> $GITHUB_OUTPUT
+      - name: Echo both versions
+        run: |
+          echo "old_version=${{ steps.old-version.outputs.old_version }}"
+          echo "new_version=${{ steps.new-version.outputs.new_version }}"
 
   deploy:
     needs: build

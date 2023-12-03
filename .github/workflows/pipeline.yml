@@ -6,43 +6,51 @@ on:
 env:
   AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
   AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-  SAM_TEMPLATE: template.yml
-  STACK_NAME: sam-app
-  PIPELINE_EXECUTION_ROLE: arn:aws:iam::037285738788:role/aws-sam-cli-managed-dev-pipel-PipelineExecutionRole-gRlUAygqnAzj
-  CLOUDFORMATION_EXECUTION_ROLE: arn:aws:iam::037285738788:role/aws-sam-cli-managed-dev-p-CloudFormationExecutionRo-9JqNMhGGUbC7
-  ARTIFACTS_BUCKET: aws-sam-cli-managed-dev-pipeline-r-artifactsbucket-xtwfiicdozyt
-  REGION: us-east-1
 
 jobs:
-  build-and-deploy-feature:
-    # if: startsWith(github.ref, 'refs/heads/feature')
+  build:
     runs-on: ubuntu-latest
-    env:
-      SAM_CLI_TELEMETRY: 0
+    outputs:
+      old_version: ${{ steps.old-version.outputs.old_version }}
+      new_version: ${{ steps.new-version.outputs.new_version }}
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-python@v4
+      - uses: actions/setup-teraform@v3
         with:
-          python-version: "3.10"
-      - uses: aws-actions/setup-sam@v2
-        with:
-          use-installer: true
-      - run: |
-          echo $SAM_CLI_TELEMETRY
-          sam build --template ${SAM_TEMPLATE}
+          terraform_wrapper: false
+      - id: plan
+        run: terraform plan -no-color
+      - id: old-version
+        run: echo "old_version=${{ steps.plan.outputs.current_version }}" >> $GITHUB_OUTPUT
+      - id: apply
+        run: terraform apply -auto-approve -no-color
+      - id: new-version
+        run: echo "new_version=${{ steps.apply.outputs.current_version }}" >> $GITHUB_OUTPUT
 
-      - name: Assume the testing pipeline user role
-        uses: aws-actions/configure-aws-credentials@v1-node16
-        with:
-          aws-access-key-id: ${{ env.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ env.AWS_SECRET_ACCESS_KEY }}
-          aws-region: ${{ env.REGION }}
-
-      - name: Deploy to feature stack in the testing account
-        shell: bash
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    if: needs.build.outputs.old_version != needs.build.outputs.new_version
+    steps:
+      - uses: actions/checkout@v4
+      - name: Generate JSON File for Deployment
         run: |
-          sam deploy --stack-name $(echo ${GITHUB_REF##*/} | tr -cd '[a-zA-Z0-9-]') \
-            --capabilities CAPABILITY_IAM \
-            --region ${REGION} \
-            --s3-bucket ${ARTIFACTS_BUCKET} \
-            --no-fail-on-empty-changeset
+          cat <<EOF >deployment.json
+          {
+              "version": 0.0,
+              "Resources": [{
+                  "TargetService": {
+                      "Type": "AWS::Lambda::Function",
+                      "Properties": {
+                          "Name": "MyLambdaFunction",
+                          "Alias": 'live',
+                          "CurrentVersion": "${{ needs.build.outputs.old_version }}",
+                          "TargetVersion": "${{ needs.build.outputs.new_version }}"
+                      }
+                  }
+              }]
+          }
+          EOF
+      - name: Deploy
+        run: |
+          aws deploy create-deployment --cli-input-json file://deployment.json

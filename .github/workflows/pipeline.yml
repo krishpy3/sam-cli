@@ -9,33 +9,48 @@ env:
   AWS_DEFAULT_REGION: us-east-1
   CODEDEPLOY_APP: MyLambdaCodeDeployApp
   CODEDEPLOY_GROUP: MyLambdaDeploymentGroup
+  FUNCTION_NAME: MyLambdaFunction
 
 jobs:
   build:
     runs-on: ubuntu-latest
     outputs:
-      # old_version: ${{ steps.old-version.outputs.old_version }}
-      # new_version: ${{ steps.new-version.outputs.new_version }}
-      old_version: 3
-      new_version: 9
+      old_version: ${{ steps.versions.outputs.old_version }}
+      new_version: ${{ steps.versions.outputs.new_version }}
+    env:
+      TF_VAR_function_name: ${{ env.FUNCTION_NAME }}
+      TF_VAR_code_deploy_app_name: ${{ env.CODEDEPLOY_APP }}
+      TF_VAR_deployment_group_name: ${{ env.CODEDEPLOY_GROUP }}
     steps:
       - uses: actions/checkout@v4
-      # - uses: hashicorp/setup-terraform@v3
-      #   with:
-      #     terraform_wrapper: false
-      # - run: terraform init -no-color
-      # - id: plan
-      #   run: terraform plan -no-color
-      # - id: old-version
-      #   run: echo "old_version=$(terraform output -no-color current_version)" >> $GITHUB_OUTPUT
-      # - id: apply
-      #   run: terraform apply -auto-approve -no-color
-      # - id: new-version
-      #   run: echo "new_version=$(terraform output -no-color current_version)" >> $GITHUB_OUTPUT
-      # - name: Echo both versions
-      #   run: |
-      #     echo "old_version=${{ steps.old-version.outputs.old_version }}"
-      #     echo "new_version=${{ steps.new-version.outputs.new_version }}"
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_wrapper: false
+      - run: terraform init -no-color
+      - name: Check if lambda function alias exists
+        run: |
+          if aws lambda get-alias --function-name $(FUNCTION_NAME) --name live; then
+            echo "Lambda function alias exists"
+          else
+            echo "Lambda function alias does not exist"
+            exit 1
+          fi
+
+      - id: plan
+        run: terraform plan -no-color
+
+      - id: apply
+        run: terraform apply -auto-approve -no-color
+
+      - id: versions
+        run: |
+          echo "new_version=$(terraform output -no-color current_version)" >> $GITHUB_OUTPUT
+          echo "old_version=$(terraform output -no-color live_version)" >> $GITHUB_OUTPUT
+
+      - name: Echo both versions
+        run: |
+          echo "old_version=${{ steps.versions.outputs.old_version }}"
+          echo "new_version=${{ steps.versions.outputs.new_version }}"
 
   deploy:
     needs: build
@@ -52,7 +67,7 @@ jobs:
               "revision": {
                   "revisionType": "AppSpecContent",
                   "appSpecContent": {
-                      "content": "{\"version\":0.0,\"Resources\":[{\"TargetService\":{\"Type\":\"AWS::Lambda::Function\",\"Properties\":{\"Name\":\"MyLambdaFunction\",\"Alias\":\"live\",\"CurrentVersion\":${{needs.build.outputs.old_version}},\"TargetVersion\":${{needs.build.outputs.new_version}}}}}]}"
+                      "content": "{\"version\":0.0,\"Resources\":[{\"TargetService\":{\"Type\":\"AWS::Lambda::Function\",\"Properties\":{\"Name\":\"$(FUNCTION_NAME)\",\"Alias\":\"live\",\"CurrentVersion\":${{needs.build.outputs.old_version}},\"TargetVersion\":${{needs.build.outputs.new_version}}}}}]}"
                   }
               }
           }

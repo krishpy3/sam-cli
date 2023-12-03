@@ -50,7 +50,6 @@ def handler(event, context):
 
 def set_date_result(option='today'):
     d = datetime.date.today()
-
     if option == 'yesterday':
         d -= datetime.timedelta(days=1)
     elif option == 'tomorrow':

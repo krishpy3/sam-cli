@@ -59,7 +59,6 @@ def set_date_result(option='today'):
     mo = d.month
     da = d.day
     y = d.year
-
     result = {
         'month': mo,
         'day': da,

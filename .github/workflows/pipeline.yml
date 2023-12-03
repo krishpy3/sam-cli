@@ -47,8 +47,8 @@ jobs:
 
       - id: versions
         run: |
-          echo "new_version=$(terraform output -no-color current_version)" >> $GITHUB_OUTPUT
-          echo "old_version=$(terraform output -no-color live_version)" >> $GITHUB_OUTPUT
+          echo "new_version=$(terraform output -raw current_version)" >> $GITHUB_OUTPUT
+          echo "old_version=$(terraform output -raw live_version)" >> $GITHUB_OUTPUT
 
       - name: Echo both versions
         run: |

@@ -47,7 +47,6 @@ def handler(event, context):
 
     return response
 
-
 def set_date_result(option='today'):
     d = datetime.date.today()
     if option == 'yesterday':

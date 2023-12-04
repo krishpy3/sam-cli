@@ -159,9 +159,10 @@ resource "aws_codedeploy_app" "lambda_codedeploy_app" {
 
 # CodeDeploy Deployment Group
 resource "aws_codedeploy_deployment_group" "lambda_deployment_group" {
-  app_name               = aws_codedeploy_app.lambda_codedeploy_app.name
-  deployment_group_name  = var.deployment_group_name
-  deployment_config_name = "CodeDeployDefault.LambdaAllAtOnce"
+  app_name              = aws_codedeploy_app.lambda_codedeploy_app.name
+  deployment_group_name = var.deployment_group_name
+  # linear
+  deployment_config_name = "CodeDeployDefault.LambdaLinear10PercentEvery1Minute"
 
   service_role_arn = aws_iam_role.example.arn
 

@@ -24,7 +24,7 @@ def handler(event, context):
     lambda_params = {
         'FunctionName': function_to_test,
         'Payload': json.dumps({'option': 'time'}),
-        'InvocationType': 'RequestResponse'
+        'InvocationType': 'RequestResponse',
     }
 
     try:

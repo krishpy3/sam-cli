@@ -37,6 +37,7 @@ jobs:
     if: needs.generate-matrix.outputs.matrix != '[]'
     strategy:
       matrix: ${{ fromJson(needs.generate-matrix.outputs.matrix) }}
+      max-parallel: 1
     defaults:
       run:
         working-directory: lambda/${{ matrix.dir }}

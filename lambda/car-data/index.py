@@ -23,7 +23,7 @@ def handler(event, context):
             result = {
                 'error': "Must specify 'yesterday', 'today', or 'tomorrow'."}
             sc = 400
-    # Uncomment the below section when updating the function
+    # Uncomment the below section when updating the function.
     elif event.get('option') == 'time':
         d = datetime.datetime.now()
         h = d.hour

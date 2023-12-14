@@ -38,7 +38,7 @@ def handler(event, context):
 
         # Check if the status code returned by the updated function is 400
         if result['statusCode'] != 400:
-            print("Validation of time parameter succeeded")
+            print("Validation of time parameter succeeded.")
             lambda_result = "Succeeded"
         else:
             print("Validation failed")

@@ -36,7 +36,7 @@ def handler(event, context):
         }
         sc = 200
     else:
-        result = {'error': "Must specify 'date' or 'time'."}
+        result = {"error": "Must specify 'date' or 'time'.."}
         sc = 400
 
     response = {

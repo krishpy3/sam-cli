@@ -12,10 +12,6 @@ terraform {
   }
 }
 
-variable "function_name" {
-  default = "MyLambdaFunction"
-}
-
 variable "code_deploy_app_name" {
   default = "MyLambdaCodeDeployApp"
 }
@@ -67,11 +63,11 @@ resource "aws_iam_role_policy_attachment" "lambda_attachment" {
 # Lambda function
 data "archive_file" "main_lambda_zip" {
   type        = "zip"
-  source_file = "lambda/myDateTimeFunction.py"
-  output_path = ".tmp/myDateTimeFunction.zip"
+  source_file = "lambda/car-data/index.py"
+  output_path = ".tmp/car-data/index.zip"
 }
 resource "aws_lambda_function" "main_lambda" {
-  function_name = var.function_name
+  function_name = "car-data"
   role          = aws_iam_role.lambda_execution_role.arn
 
   # Assuming your Python code is in a file named lambda_function.py
@@ -79,18 +75,18 @@ resource "aws_lambda_function" "main_lambda" {
   source_code_hash = filebase64sha256(data.archive_file.main_lambda_zip.output_path)
   handler          = "lambda_function.lambda_handler"
   runtime          = "python3.10"
-  publish          = true
+  # publish          = true
 }
 
 
 # Pre traffic hook
 data "archive_file" "pre_hook_zip" {
   type        = "zip"
-  source_file = "lambda/beforeAllowTraffic.py"
-  output_path = ".tmp/beforeAllowTraffic.zip"
+  source_file = "lambda/car-inter/handler.py"
+  output_path = ".tmp/car-inter/handler.zip"
 }
 resource "aws_lambda_function" "pre_traffic_hook" {
-  function_name = "PreTrafficHook"
+  function_name = "car-inter"
   role          = aws_iam_role.lambda_execution_role.arn
 
   filename         = data.archive_file.pre_hook_zip.output_path
@@ -108,11 +104,11 @@ resource "aws_lambda_function" "pre_traffic_hook" {
 # Post traffic hook
 data "archive_file" "post_hook_zip" {
   type        = "zip"
-  source_file = "lambda/afterAllowTraffic.py"
-  output_path = ".tmp/afterAllowTraffic.zip"
+  source_file = "lambda/third/beforeAllowTraffic.py"
+  output_path = ".tmp/third/beforeAllowTraffic.zip"
 }
 resource "aws_lambda_function" "post_traffic_hook" {
-  function_name = "PostTrafficHook"
+  function_name = "third"
   role          = aws_iam_role.lambda_execution_role.arn
 
   filename         = data.archive_file.post_hook_zip.output_path
@@ -170,18 +166,4 @@ resource "aws_codedeploy_deployment_group" "lambda_deployment_group" {
     deployment_type   = "BLUE_GREEN"
     deployment_option = "WITH_TRAFFIC_CONTROL"
   }
-
-}
-
-output "current_version" {
-  value = aws_lambda_function.main_lambda.version
-}
-
-data "aws_lambda_alias" "live_version" {
-  name          = "live"
-  function_name = aws_lambda_function.main_lambda.function_name
-}
-
-output "live_version" {
-  value = data.aws_lambda_alias.live_version.function_version
 }

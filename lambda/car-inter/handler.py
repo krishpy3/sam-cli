@@ -33,7 +33,6 @@ def handler(event, context):
         # Invoke the updated Lambda function
         response = lambda_client.invoke(**lambda_params)
         result = json.loads(response['Payload'].read())
-
         print(f"Result1: {json.dumps(result)}")
         print(f"statusCode: {result['statusCode']}")
 
@@ -52,7 +51,7 @@ def handler(event, context):
             'status': lambda_result  # status can be 'Succeeded' or 'Failed'
         }
 
-        # PassCodeDeploy the prepared validation test results
+        # Pass CodeDeploy the prepared validation test results
         response = codedeploy.put_lifecycle_event_hook_execution_status(
             **params)
         print("CodeDeploy status updated successfully")

@@ -9,7 +9,7 @@ env:
   AWS_DEFAULT_REGION: us-east-1
   CODEDEPLOY_APP: MyLambdaCodeDeployApp
   CODEDEPLOY_GROUP: MyLambdaDeploymentGroup
-  FUNCTION_NAME: MyLambdaFunction
+  FUNCTION_ALIAS: live
 
 jobs:
   generate-matrix:
@@ -46,63 +46,27 @@ jobs:
         run: |
           echo "Matrix: ${{matrix.dir}}"
 
-      # - uses: hashicorp/setup-terraform@v3
-      #   with:
-      #     terraform_wrapper: false
-      # - name: Setting up variables
-      #   run: |
-      #     echo "TF_VAR_function_name=${FUNCTION_NAME}" >> $GITHUB_ENV
-      #     echo "TF_VAR_code_deploy_app=${CODEDEPLOY_APP}" >> $GITHUB_ENV
-      #     echo "TF_VAR_code_deploy_group=${CODEDEPLOY_GROUP}" >> $GITHUB_ENV
+      - id: versions
+        run: |
+          echo "old_version=$(aws lambda get-alias --function-name ${{matrix.dir}} --name ${FUNCTION_ALIAS} --query FunctionVersion --output text)" >> $GITHUB_ENV
 
-      # - name: Check if lambda function alias exists
-      #   run: |
-      #     if aws lambda get-alias --function-name ${FUNCTION_NAME} --name live; then
-      #     echo "Lambda function alias exists"
-      #     else
-      #     echo "Lambda function alias does not exist"
-      #     exit 1
-      #     fi
+          echo "new_version=$(aws lambda publish-version --function-name ${{matrix.dir}} --query Version --output text)" >> $GITHUB_ENV
 
-      # - run: terraform init -no-color
-
-      # # - id: plan
-      # #   run: terraform plan -no-color
-
-      # - id: apply
-      #   run: terraform apply -auto-approve -no-color
-
-      # - id: versions
-      #   run: |
-      #     echo "new_version=$(terraform output -raw current_version)" >> $GITHUB_OUTPUT
-      #     echo "old_version=$(terraform output -raw live_version)" >> $GITHUB_OUTPUT
-
-      # - name: Echo both versions
-      #   run: |
-      #     echo "old_version=${{ steps.versions.outputs.old_version }}"
-      #     echo "new_version=${{ steps.versions.outputs.new_version }}"
-
-  # deploy:
-  #   needs: build
-  #   runs-on: ubuntu-latest
-  #   if: needs.build.outputs.old_version != needs.build.outputs.new_version
-  #   steps:
-  #     - uses: actions/checkout@v4
-  #     - name: Generate JSON File for Deployment
-  #       run: |
-  #         cat <<EOF >deployment.json
-  #         {
-  #             "applicationName": "${CODEDEPLOY_APP}",
-  #             "deploymentGroupName": "${CODEDEPLOY_GROUP}",
-  #             "revision": {
-  #                 "revisionType": "AppSpecContent",
-  #                 "appSpecContent": {
-  #                     "content": "{\"version\":0.0,\"Resources\":[{\"TargetService\":{\"Type\":\"AWS::Lambda::Function\",\"Properties\":{\"Name\":\"${FUNCTION_NAME}\",\"Alias\":\"live\",\"CurrentVersion\":${{needs.build.outputs.old_version}},\"TargetVersion\":${{needs.build.outputs.new_version}}}}}]}"
-  #                 }
-  #             }
-  #         }
-  #         EOF
-  #     - run: cat deployment.json
-  #     - name: Deploy
-  #       run: |
-  #         aws deploy create-deployment --cli-input-json file://deployment.json
+      - name: Generate JSON File for Deployment
+        run: |
+          cat <<EOF >deployment.json
+          {
+              "applicationName": "${CODEDEPLOY_APP}",
+              "deploymentGroupName": "${CODEDEPLOY_GROUP}",
+              "revision": {
+                  "revisionType": "AppSpecContent",
+                  "appSpecContent": {
+                      "content": "{\"version\":0.0,\"Resources\":[{\"TargetService\":{\"Type\":\"AWS::Lambda::Function\",\"Properties\":{\"Name\":\"${{matrix.dir}}\",\"Alias\":\"live\",\"CurrentVersion\":${{steps.versions.outputs.old_version}},\"TargetVersion\":${{steps.versions.outputs.new_version}}}}}]}"
+                  }
+              }
+          }
+          EOF
+      - run: cat deployment.json
+      - name: Deploy
+        run: |
+          aws deploy create-deployment --cli-input-json file://deployment.json

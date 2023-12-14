@@ -14,68 +14,98 @@ env:
 jobs:
   build:
     runs-on: ubuntu-latest
-    outputs:
-      old_version: ${{ steps.versions.outputs.old_version }}
-      new_version: ${{ steps.versions.outputs.new_version }}
+    # outputs:
+    # old_version: ${{ steps.versions.outputs.old_version }}
+    # new_version: ${{ steps.versions.outputs.new_version }}
     steps:
       - uses: actions/checkout@v4
-      - uses: hashicorp/setup-terraform@v3
+      - name: Generate matrix
+        id: matrix
+        uses: hellofresh/action-changed-files@v3
         with:
-          terraform_wrapper: false
-      - name: Setting up variables
+          pattern: "lambda/(?P<dir>[^/]+)"
+          default-pattern: |
+            '.github/workflows/**'
+      - name: Echo matrix
         run: |
-          echo "TF_VAR_function_name=${FUNCTION_NAME}" >> $GITHUB_ENV
-          echo "TF_VAR_code_deploy_app=${CODEDEPLOY_APP}" >> $GITHUB_ENV
-          echo "TF_VAR_code_deploy_group=${CODEDEPLOY_GROUP}" >> $GITHUB_ENV
-
-      - name: Check if lambda function alias exists
+          echo "Matrix: ${{ toJson(steps.matrix.outputs) }}"
+      - name: Echo changed files
         run: |
-          if aws lambda get-alias --function-name ${FUNCTION_NAME} --name live; then
-          echo "Lambda function alias exists"
-          else
-          echo "Lambda function alias does not exist"
-          exit 1
-          fi
-
-      - run: terraform init -no-color
-
-      - id: plan
-        run: terraform plan -no-color
-
-      - id: apply
-        run: terraform apply -auto-approve -no-color
-
-      - id: versions
+          echo "Changed files: ${{ toJson(github.event.commits) }}"
+      - name: Echo changed dirs
         run: |
-          echo "new_version=$(terraform output -raw current_version)" >> $GITHUB_OUTPUT
-          echo "old_version=$(terraform output -raw live_version)" >> $GITHUB_OUTPUT
+          echo "Changed dirs: ${{ steps.matrix.outputs.dirs }}"
+      - name: Echo changed files
+        run: |
+          echo "Changed files: ${{ steps.matrix.outputs.files }}"
+      - name: Generate matrix
+        id: matrix1
+        uses: hellofresh/action-changed-files@v3
+        with:
+          pattern: "lambda/(?P<dir>[^/]+)"
+          default-pattern: |
+            'lambda/**'
+      - name: Echo matrix
+        run: |
+          echo "Matrix: ${{ toJson(steps.matrix1.outputs) }}"
 
-      - name: Echo both versions
-        run: |
-          echo "old_version=${{ steps.versions.outputs.old_version }}"
-          echo "new_version=${{ steps.versions.outputs.new_version }}"
+      # - uses: hashicorp/setup-terraform@v3
+      #   with:
+      #     terraform_wrapper: false
+      # - name: Setting up variables
+      #   run: |
+      #     echo "TF_VAR_function_name=${FUNCTION_NAME}" >> $GITHUB_ENV
+      #     echo "TF_VAR_code_deploy_app=${CODEDEPLOY_APP}" >> $GITHUB_ENV
+      #     echo "TF_VAR_code_deploy_group=${CODEDEPLOY_GROUP}" >> $GITHUB_ENV
 
-  deploy:
-    needs: build
-    runs-on: ubuntu-latest
-    if: needs.build.outputs.old_version != needs.build.outputs.new_version
-    steps:
-      - uses: actions/checkout@v4
-      - name: Generate JSON File for Deployment
-        run: |
-          cat <<EOF >deployment.json
-          {
-              "applicationName": "${CODEDEPLOY_APP}",
-              "deploymentGroupName": "${CODEDEPLOY_GROUP}",
-              "revision": {
-                  "revisionType": "AppSpecContent",
-                  "appSpecContent": {
-                      "content": "{\"version\":0.0,\"Resources\":[{\"TargetService\":{\"Type\":\"AWS::Lambda::Function\",\"Properties\":{\"Name\":\"${FUNCTION_NAME}\",\"Alias\":\"live\",\"CurrentVersion\":${{needs.build.outputs.old_version}},\"TargetVersion\":${{needs.build.outputs.new_version}}}}}]}"
-                  }
-              }
-          }
-          EOF
-      - run: cat deployment.json
-      - name: Deploy
-        run: |
-          aws deploy create-deployment --cli-input-json file://deployment.json
+      # - name: Check if lambda function alias exists
+      #   run: |
+      #     if aws lambda get-alias --function-name ${FUNCTION_NAME} --name live; then
+      #     echo "Lambda function alias exists"
+      #     else
+      #     echo "Lambda function alias does not exist"
+      #     exit 1
+      #     fi
+
+      # - run: terraform init -no-color
+
+      # # - id: plan
+      # #   run: terraform plan -no-color
+
+      # - id: apply
+      #   run: terraform apply -auto-approve -no-color
+
+      # - id: versions
+      #   run: |
+      #     echo "new_version=$(terraform output -raw current_version)" >> $GITHUB_OUTPUT
+      #     echo "old_version=$(terraform output -raw live_version)" >> $GITHUB_OUTPUT
+
+      # - name: Echo both versions
+      #   run: |
+      #     echo "old_version=${{ steps.versions.outputs.old_version }}"
+      #     echo "new_version=${{ steps.versions.outputs.new_version }}"
+
+  # deploy:
+  #   needs: build
+  #   runs-on: ubuntu-latest
+  #   if: needs.build.outputs.old_version != needs.build.outputs.new_version
+  #   steps:
+  #     - uses: actions/checkout@v4
+  #     - name: Generate JSON File for Deployment
+  #       run: |
+  #         cat <<EOF >deployment.json
+  #         {
+  #             "applicationName": "${CODEDEPLOY_APP}",
+  #             "deploymentGroupName": "${CODEDEPLOY_GROUP}",
+  #             "revision": {
+  #                 "revisionType": "AppSpecContent",
+  #                 "appSpecContent": {
+  #                     "content": "{\"version\":0.0,\"Resources\":[{\"TargetService\":{\"Type\":\"AWS::Lambda::Function\",\"Properties\":{\"Name\":\"${FUNCTION_NAME}\",\"Alias\":\"live\",\"CurrentVersion\":${{needs.build.outputs.old_version}},\"TargetVersion\":${{needs.build.outputs.new_version}}}}}]}"
+  #                 }
+  #             }
+  #         }
+  #         EOF
+  #     - run: cat deployment.json
+  #     - name: Deploy
+  #       run: |
+  #         aws deploy create-deployment --cli-input-json file://deployment.json

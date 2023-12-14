@@ -12,9 +12,10 @@ env:
   FUNCTION_NAME: MyLambdaFunction
 
 jobs:
-  build:
+  generate-matrix:
     runs-on: ubuntu-latest
-    # outputs:
+    outputs:
+      matrix: ${{ steps.matrix.outputs.matrix }}
     # old_version: ${{ steps.versions.outputs.old_version }}
     # new_version: ${{ steps.versions.outputs.new_version }}
     steps:
@@ -29,25 +30,21 @@ jobs:
       - name: Echo matrix
         run: |
           echo "Matrix: ${{ toJson(steps.matrix.outputs) }}"
-      - name: Echo changed files
+
+  deploy:
+    needs: generate-matrix
+    runs-on: ubuntu-latest
+    if: needs.generate-matrix.outputs.matrix != '[]'
+    strategy:
+      matrix: ${{ fromJson(needs.generate-matrix.outputs.matrix) }}
+    defaults:
+      run:
+        working-directory: lambda/${{ matrix.dir }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Generate JSON File for Deployment
         run: |
-          echo "Changed files: ${{ toJson(github.event.commits) }}"
-      - name: Echo changed dirs
-        run: |
-          echo "Changed dirs: ${{ steps.matrix.outputs.dirs }}"
-      - name: Echo changed files
-        run: |
-          echo "Changed files: ${{ steps.matrix.outputs.files }}"
-      - name: Generate matrix
-        id: matrix1
-        uses: hellofresh/action-changed-files@v3
-        with:
-          pattern: "lambda/(?P<dir>[^/]+)"
-          default-patterns: |
-            'lambda/**'
-      - name: Echo matrix
-        run: |
-          echo "Matrix: ${{ toJson(steps.matrix1.outputs) }}"
+          echo "Matrix: ${{matrix.dir}}"
 
       # - uses: hashicorp/setup-terraform@v3
       #   with:

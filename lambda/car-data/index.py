@@ -46,6 +46,7 @@ def handler(event, context):
     }
     return response
 
+
 def set_date_result(option='today'):
     d = datetime.date.today()
     if option == 'yesterday':
@@ -58,6 +59,6 @@ def set_date_result(option='today'):
     result = {
         'month': mo,
         'day': da,
-        'year': y
+        'year': y,
     }
     return result

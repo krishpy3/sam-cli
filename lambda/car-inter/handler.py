@@ -52,7 +52,7 @@ def handler(event, context):
             'status': lambda_result  # status can be 'Succeeded' or 'Failed'
         }
 
-        # Pass CodeDeploy the prepared validation test results
+        # PassCodeDeploy the prepared validation test results
         response = codedeploy.put_lifecycle_event_hook_execution_status(
             **params)
         print("CodeDeploy status updated successfully")

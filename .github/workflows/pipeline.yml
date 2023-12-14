@@ -61,7 +61,7 @@ jobs:
               "revision": {
                   "revisionType": "AppSpecContent",
                   "appSpecContent": {
-                      "content": "{\"version\":0.0,\"Resources\":[{\"TargetService\":{\"Type\":\"AWS::Lambda::Function\",\"Properties\":{\"Name\":\"${{matrix.dir}}\",\"Alias\":\"live\",\"CurrentVersion\":${{steps.versions.outputs.old_version}},\"TargetVersion\":${{steps.versions.outputs.new_version}}}}}]}"
+                      "content": "{\"version\":0.0,\"Resources\":[{\"TargetService\":{\"Type\":\"AWS::Lambda::Function\",\"Properties\":{\"Name\":\"${{matrix.dir}}\",\"Alias\":\"live\",\"CurrentVersion\":"${{steps.versions.outputs.old_version}}",\"TargetVersion\":"${{steps.versions.outputs.new_version}}"}}}]}"
                   }
               }
           }

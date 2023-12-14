@@ -17,7 +17,6 @@ def handler(event, context):
     function_to_test = os.environ.get('NewVersion')
     print(
         f"BeforeAllowTraffic hook tests started\nTesting new function version: {function_to_test}")
-
     # Create parameters to pass to the updated Lambda function that
     # include the newly added "time" option. If the function did not
     # update, then the "time" option is invalid and function returns

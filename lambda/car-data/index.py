@@ -44,7 +44,6 @@ def handler(event, context):
         'headers': {'Content-type': 'application/json'},
         'body': json.dumps(result)
     }
-
     return response
 
 def set_date_result(option='today'):

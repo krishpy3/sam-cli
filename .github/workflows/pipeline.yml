@@ -24,7 +24,7 @@ jobs:
         uses: hellofresh/action-changed-files@v3
         with:
           pattern: "lambda/(?P<dir>[^/]+)"
-          default-pattern: |
+          default-patterns: |
             '.github/workflows/**'
       - name: Echo matrix
         run: |
@@ -43,7 +43,7 @@ jobs:
         uses: hellofresh/action-changed-files@v3
         with:
           pattern: "lambda/(?P<dir>[^/]+)"
-          default-pattern: |
+          default-patterns: |
             'lambda/**'
       - name: Echo matrix
         run: |

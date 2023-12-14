@@ -22,7 +22,7 @@ def handler(event, context):
     # include the original "date" parameter. If the function did not
     # update as expected, then the "date" option might be invalid. If
     # the parameter is invalid, the function returns
-    # a statusCode of 400 indicating it failed.
+    # a statusCode of 400 indicating it failed..
     lambda_params = {
         'FunctionName': function_to_test,
         'Payload': json.dumps({'option': 'date', 'period': 'today'}),

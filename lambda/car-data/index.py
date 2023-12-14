@@ -7,7 +7,7 @@ def handler(event, context):
         event = json.loads(event['body'])
 
     sc = None  # Status code
-    result = None  # Response payload
+    result = None  # Response payloa
 
     if event.get('option') == 'date':
         if event.get('period') == 'yesterday':

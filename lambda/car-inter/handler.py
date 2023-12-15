@@ -44,7 +44,7 @@ def handler(event, context):
             print("Validation failed")
             lambda_result = "Failed"
 
-        # Complete the PostTraffic Hook by sending- CodeDeploy the validation status
+        # Complete the PostTraffic Hook by sendingCodeDeploy the validation status
         params = {
             'deploymentId': deployment_id,
             'lifecycleEventHookExecutionId': lifecycle_event_hook_execution_id,

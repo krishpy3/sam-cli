@@ -156,9 +156,25 @@ resource "aws_codedeploy_app" "lambda_codedeploy_app" {
 # CodeDeploy Deployment Group
 resource "aws_codedeploy_deployment_group" "lambda_deployment_group" {
   app_name              = aws_codedeploy_app.lambda_codedeploy_app.name
-  deployment_group_name = var.deployment_group_name
+  deployment_group_name = "${var.deployment_group_name}-car-data"
   # linear
   deployment_config_name = "CodeDeployDefault.LambdaLinear10PercentEvery1Minute"
+  # deployment_config_name = "CodeDeployDefault.LambdaAllAtOnce"
+
+  service_role_arn = aws_iam_role.example.arn
+
+  deployment_style {
+    deployment_type   = "BLUE_GREEN"
+    deployment_option = "WITH_TRAFFIC_CONTROL"
+  }
+}
+# CodeDeploy Deployment Group
+resource "aws_codedeploy_deployment_group" "lambda_deployment_group_1" {
+  app_name              = aws_codedeploy_app.lambda_codedeploy_app.name
+  deployment_group_name = "${var.deployment_group_name}-car-inter"
+  # linear
+  deployment_config_name = "CodeDeployDefault.LambdaLinear10PercentEvery1Minute"
+  # deployment_config_name = "CodeDeployDefault.LambdaAllAtOnce"
 
   service_role_arn = aws_iam_role.example.arn
 

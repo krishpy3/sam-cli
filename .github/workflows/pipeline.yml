@@ -58,7 +58,7 @@ jobs:
           cat <<EOF >deployment.json
           {
               "applicationName": "${CODEDEPLOY_APP}",
-              "deploymentGroupName": "${CODEDEPLOY_GROUP}",
+              "deploymentGroupName": "${CODEDEPLOY_GROUP}-${{matrix.dir}}",
               "revision": {
                   "revisionType": "AppSpecContent",
                   "appSpecContent": {

@@ -93,11 +93,7 @@ resource "aws_lambda_function" "pre_traffic_hook" {
   source_code_hash = filebase64sha256(data.archive_file.pre_hook_zip.output_path)
   handler          = "pre_hook.lambda_handler"
   runtime          = "python3.8"
-  environment {
-    variables = {
-      NewVersion = "${aws_lambda_function.main_lambda.arn}:${aws_lambda_function.main_lambda.version}"
-    }
-  }
+
 }
 
 
@@ -116,11 +112,7 @@ resource "aws_lambda_function" "post_traffic_hook" {
   handler          = "post_hook.lambda_handler"
   runtime          = "python3.8"
 
-  environment {
-    variables = {
-      NewVersion = "${aws_lambda_function.main_lambda.arn}:${aws_lambda_function.main_lambda.version}"
-    }
-  }
+
 }
 
 
@@ -158,8 +150,8 @@ resource "aws_codedeploy_deployment_group" "lambda_deployment_group" {
   app_name              = aws_codedeploy_app.lambda_codedeploy_app.name
   deployment_group_name = "${var.deployment_group_name}-car-data"
   # linear
-  deployment_config_name = "CodeDeployDefault.LambdaLinear10PercentEvery1Minute"
-  # deployment_config_name = "CodeDeployDefault.LambdaAllAtOnce"
+  # deployment_config_name = "CodeDeployDefault.LambdaLinear10PercentEvery1Minute"
+  deployment_config_name = "CodeDeployDefault.LambdaAllAtOnce"
 
   service_role_arn = aws_iam_role.example.arn
 
@@ -172,6 +164,21 @@ resource "aws_codedeploy_deployment_group" "lambda_deployment_group" {
 resource "aws_codedeploy_deployment_group" "lambda_deployment_group_1" {
   app_name              = aws_codedeploy_app.lambda_codedeploy_app.name
   deployment_group_name = "${var.deployment_group_name}-car-inter"
+  # linear
+  deployment_config_name = "CodeDeployDefault.LambdaLinear10PercentEvery1Minute"
+  # deployment_config_name = "CodeDeployDefault.LambdaAllAtOnce"
+
+  service_role_arn = aws_iam_role.example.arn
+
+  deployment_style {
+    deployment_type   = "BLUE_GREEN"
+    deployment_option = "WITH_TRAFFIC_CONTROL"
+  }
+}
+# CodeDeploy Deployment Group
+resource "aws_codedeploy_deployment_group" "lambda_deployment_group_2" {
+  app_name              = aws_codedeploy_app.lambda_codedeploy_app.name
+  deployment_group_name = "${var.deployment_group_name}-third"
   # linear
   deployment_config_name = "CodeDeployDefault.LambdaLinear10PercentEvery1Minute"
   # deployment_config_name = "CodeDeployDefault.LambdaAllAtOnce"

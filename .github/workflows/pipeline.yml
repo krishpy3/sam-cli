@@ -16,8 +16,6 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       matrix: ${{ steps.matrix.outputs.matrix }}
-    # old_version: ${{ steps.versions.outputs.old_version }}
-    # new_version: ${{ steps.versions.outputs.new_version }}
     steps:
       - uses: actions/checkout@v4
       - name: Generate matrix
@@ -31,27 +29,56 @@ jobs:
         run: |
           echo "Matrix: ${{ toJson(steps.matrix.outputs.matrix) }}"
 
-  deploy:
+  build:
     needs: generate-matrix
     runs-on: ubuntu-latest
     if: needs.generate-matrix.outputs.matrix != '[]'
     strategy:
       matrix: ${{ fromJson(needs.generate-matrix.outputs.matrix) }}
-      max-parallel: 1
     defaults:
       run:
         working-directory: lambda/${{ matrix.dir }}
     steps:
       - uses: actions/checkout@v4
-      - name: Generate JSON File for Deployment
+      - name: Generate Lambda Zip File
         run: |
-          echo "Matrix: ${{matrix.dir}}"
+          zip -r ${{ github.workspace }}/${{ matrix.dir }}.zip .
+
+      - name: Upload Artifact to Github
+        uses: actions/upload-artifact@v3
+        with:
+          name: function_code_${{ matrix.dir }}
+          path: ${{ github.workspace }}/${{ matrix.dir }}.zip
+          if-no-files-found: error
+
+  deploy:
+    needs:
+      - generate-matrix
+      - build
+    runs-on: ubuntu-latest
+    if: needs.generate-matrix.outputs.matrix != '[]'
+    strategy:
+      matrix: ${{ fromJson(needs.generate-matrix.outputs.matrix) }}
+    defaults:
+      run:
+        working-directory: lambda/${{ matrix.dir }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Download Artifact from Github
+        uses: actions/download-artifact@v3
+        id: function_code
+        with:
+          name: function_code_${{ matrix.dir }}
+      - name: Echo Artifact Path
+        run: |
+          echo "Artifact Path: ${{ steps.function_code.outputs.download-path }}"
+          echo "All outputs: ${{ toJson(steps) }}"
 
       - id: versions
         run: |
           echo "old_version=$(aws lambda get-alias --function-name ${{matrix.dir}} --name ${FUNCTION_ALIAS} --query FunctionVersion --output text)" >> $GITHUB_ENV
 
-          echo "new_version=$(aws lambda publish-version --function-name ${{matrix.dir}} --query Version --output text)" >> $GITHUB_ENV
+          echo "new_version=$(aws lambda update-function-code --function-name ${{matrix.dir}} --zip-file fileb://${{ steps.function_code.outputs.download-path }}/${{matrix.dir}} --publish --query Version --output text)" >> $GITHUB_ENV
 
       - name: Generate JSON File for Deployment
         run: |

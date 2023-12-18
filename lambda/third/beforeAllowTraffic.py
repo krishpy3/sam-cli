@@ -57,5 +57,5 @@ def handler(event, context):
         return "CodeDeploy status updated successfully"
 
     except Exception as e:
-        print(f"CodeDeploy Status update failed\n{str(e)}")
+        print(f"CodeDeploy Status update .failed\n{str(e)}")
         raise e

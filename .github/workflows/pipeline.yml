@@ -67,7 +67,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: deploy_method_${{ matrix.dir }}
-          path: $GITHUB_WORKSPACE/deploy_method.txt
+          path: ${{ github.workspace }}/deploy_method.txt
           if-no-files-found: error
 
       - run: echo ${{steps.find_deploy.outputs.deploy}}

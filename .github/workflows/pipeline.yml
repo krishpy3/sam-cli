@@ -54,9 +54,9 @@ jobs:
         run: |
           size=$(du -s --block-size=1M | cut -f1)
           if [ "${size}" -lt 250 ]; then
-            echo "deploy=direct" >> $GITHUB_ENV
+            echo "deploy=direct" >> $GITHUB_OUTPUT
           else
-            echo "deploy=docker" >> $GITHUB_ENV
+            echo "deploy=docker" >> $GITHUB_OUTPUT
           fi
 
       - run: echo ${{steps.find_deploy.outputs.deploy}}

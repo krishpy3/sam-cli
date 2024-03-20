@@ -38,8 +38,8 @@ jobs:
     defaults:
       run:
         working-directory: lambda/${{ matrix.dir }}
-    outputs:
-      image: ${{ steps.build-image.outputs.image }}
+    # outputs:
+    #   image: ${{ steps.build-image.outputs.image }}
     steps:
       - uses: actions/checkout@v4
 
@@ -56,6 +56,7 @@ jobs:
       - name: Generate Lambda Zip File
         run: |
           echo ${{ steps.calc_size.outputs.SIZE }}
+          echo "$(du -s --block-size=1M | cut -f1)"
           # zip -r ${{ github.workspace }}/${{ matrix.dir }}.zip .
 
       # - name: Upload Artifact to Github

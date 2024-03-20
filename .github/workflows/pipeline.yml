@@ -136,6 +136,7 @@ jobs:
         run: |
           echo "Artifact Path: ${{ steps.method.outputs.download-path }}"
           echo "All outputs: ${{ toJson(steps) }}"
+          cat ${{ steps.method.outputs.download-path }}/deploy_method.txt
 
 
       # - name: Download Artifact from Github

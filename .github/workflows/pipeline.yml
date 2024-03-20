@@ -60,6 +60,8 @@ jobs:
             echo "deploy=docker" >> $GITHUB_OUTPUT
           fi
           echo "${{matrix.dir}}-method=$deploy" >> $GITHUB_WORKSPACE/deploy_method.txt
+          echo $GITHUB_WORKSPACE
+          ls $GITHUB_WORKSPACE
 
       - name: Upload Artifact to Github
         uses: actions/upload-artifact@v4

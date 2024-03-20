@@ -72,22 +72,22 @@ jobs:
 
       - run: echo ${{steps.find_deploy.outputs.deploy}}
 
-      - name: Generate Lambda Zip File
-        if: steps.find_deploy.outputs.deploy == 'direct'
-        run: |
-          cd package
-          zip -r ../my_deployment_package.zip .
-          cd ..
-          zip my_deployment_package.zip handler.py
-          mv my_deployment_package.zip ${{ github.workspace }}/${{ matrix.dir }}.zip
+      # - name: Generate Lambda Zip File
+      #   if: steps.find_deploy.outputs.deploy == 'direct'
+      #   run: |
+      #     cd package
+      #     zip -r ../my_deployment_package.zip .
+      #     cd ..
+      #     zip my_deployment_package.zip handler.py
+      #     mv my_deployment_package.zip ${{ github.workspace }}/${{ matrix.dir }}.zip
 
-      - name: Upload Artifact to Github
-        if: steps.find_deploy.outputs.deploy == 'direct'
-        uses: actions/upload-artifact@v4
-        with:
-          name: function_code_${{ matrix.dir }}
-          path: ${{ github.workspace }}/${{ matrix.dir }}.zip
-          if-no-files-found: error
+      # - name: Upload Artifact to Github
+      #   if: steps.find_deploy.outputs.deploy == 'direct'
+      #   uses: actions/upload-artifact@v4
+      #   with:
+      #     name: function_code_${{ matrix.dir }}
+      #     path: ${{ github.workspace }}/${{ matrix.dir }}.zip
+      #     if-no-files-found: error
 
       - name: Configure AWS credentials
         if: steps.find_deploy.outputs.deploy == 'docker'
@@ -127,7 +127,7 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Download Artifact from Github
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         id: method  
         with:
           name: deploy_method_${{ matrix.dir }}

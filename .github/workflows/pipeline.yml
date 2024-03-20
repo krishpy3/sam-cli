@@ -40,7 +40,7 @@ jobs:
         working-directory: lambda/${{ matrix.dir }}
     outputs:
       image: ${{ steps.build-image.outputs.image }}
-      size: ${{ steps.calc_size.outputs.size }}
+      deploy: ${{ steps.find_deploy.outputs.deploy }}
     steps:
       - uses: actions/checkout@v4
 
@@ -50,12 +50,19 @@ jobs:
           pip install --target ./package -r requirements.txt
 
       - name: Calculate Directory Size
-        id: calc_size
+        id: find_deploy
         run: |
-          echo "size=$(du -s --block-size=1M | cut -f1)" >> $GITHUB_ENV
+          size=$(du -s --block-size=1M | cut -f1)
+          if [ "${size}" -lt 250 ]; then
+            echo "deploy=direct" >> $GITHUB_ENV
+          else
+            echo "deploy=docker" >> $GITHUB_ENV
+          fi
+
+      - run: echo ${{steps.find_deploy.outputs.deploy}}
 
       - name: Generate Lambda Zip File
-        if: steps.calc_size.outputs.size < 250
+        if: steps.find_deploy.outputs.deploy == 'direct'
         run: |
           cd package
           zip -r ../my_deployment_package.zip .
@@ -64,7 +71,7 @@ jobs:
           mv my_deployment_package.zip ${{ github.workspace }}/${{ matrix.dir }}.zip
 
       - name: Upload Artifact to Github
-        if: steps.calc_size.outputs.size < 250
+        if: steps.find_deploy.outputs.deploy == 'direct'
         uses: actions/upload-artifact@v3
         with:
           name: function_code_${{ matrix.dir }}
@@ -72,18 +79,18 @@ jobs:
           if-no-files-found: error
 
       - name: Configure AWS credentials
-        if: steps.calc_size.outputs.size >= 250
+        if: steps.find_deploy.outputs.deploy == 'docker'
         uses: aws-actions/configure-aws-credentials@v4
         with:
           aws-region: us-east-1
 
       - name: Login to Amazon ECR
-        if: steps.calc_size.outputs.size >= 250
+        if: steps.find_deploy.outputs.deploy == 'docker'
         id: login-ecr
         uses: aws-actions/amazon-ecr-login@v2
 
       - name: Build and Push to Docker
-        if: steps.calc_size.outputs.size >= 250
+        if: steps.find_deploy.outputs.deploy == 'docker'
         id: build-image
         env:
           ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
@@ -110,22 +117,24 @@ jobs:
 
       - name: Download Artifact from Github
         uses: actions/download-artifact@v3
-        if: needs.build.outputs.size < 250
+        if: needs.build.outputs.deploy == 'direct'
         id: function_code
         with:
           name: function_code_${{ matrix.dir }}
 
       - name: Echo Artifact Path
-        if: needs.build.outputs.size < 250
+        if: needs.build.outputs.deploy == 'direct'
         run: |
           echo "Artifact Path: ${{ steps.function_code.outputs.download-path }}"
           echo "All outputs: ${{ toJson(steps) }}"
 
       - id: versions
+        env:
+          deploy: ${{ needs.build.outputs.deploy }}
         run: |
           echo "old_version=$(aws lambda get-alias --function-name ${{matrix.dir}} --name ${FUNCTION_ALIAS} --query FunctionVersion --output text)" >> $GITHUB_ENV
 
-          if [ "${{ needs.build.outputs.size }}" -lt 250 ]; then
+          if [ "$deploy" = "direct" ]; then
             new_version=$(aws lambda update-function-code --function-name ${{matrix.dir}} --zip-file fileb://${{ steps.function_code.outputs.download-path }}/${{matrix.dir}}.zip --publish --query Version --output text)
           else
             new_version=$(aws lambda update-function-code --function-name ${{matrix.dir}} --image-uri ${{ needs.build.outputs.image }} --publish --query Version --output text)

@@ -40,7 +40,6 @@ jobs:
         working-directory: lambda/${{ matrix.dir }}
     outputs:
       image: ${{ steps.build-image.outputs.image }}
-      deploy: ${{ steps.find_deploy.outputs.deploy }}
     steps:
       - uses: actions/checkout@v4
 
@@ -58,6 +57,14 @@ jobs:
           else
             echo "deploy=docker" >> $GITHUB_OUTPUT
           fi
+          echo "${{matrix.dir}}-method=$deploy" >> ../../deploy_method.txt
+
+      - name: Upload Artifact to Github
+        uses: actions/upload-artifact@v4
+        with:
+          name: deploy_method_${{ matrix.dir }}
+          path: ../../deploy_method.txt
+          if-no-files-found: error
 
       - run: echo ${{steps.find_deploy.outputs.deploy}}
 
@@ -72,7 +79,7 @@ jobs:
 
       - name: Upload Artifact to Github
         if: steps.find_deploy.outputs.deploy == 'direct'
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: function_code_${{ matrix.dir }}
           path: ${{ github.workspace }}/${{ matrix.dir }}.zip
@@ -84,22 +91,22 @@ jobs:
         with:
           aws-region: us-east-1
 
-      - name: Login to Amazon ECR
-        if: steps.find_deploy.outputs.deploy == 'docker'
-        id: login-ecr
-        uses: aws-actions/amazon-ecr-login@v2
+      # - name: Login to Amazon ECR
+      #   if: steps.find_deploy.outputs.deploy == 'docker'
+      #   id: login-ecr
+      #   uses: aws-actions/amazon-ecr-login@v2
 
-      - name: Build and Push to Docker
-        if: steps.find_deploy.outputs.deploy == 'docker'
-        id: build-image
-        env:
-          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
-          ECR_REPOSITORY: ${{ matrix.dir }}
-          IMAGE_TAG: ${{ github.sha }}
-        run: |
-          docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
-          docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
-          echo "image=$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG" >> $GITHUB_OUTPUT
+      # - name: Build and Push to Docker
+      #   if: steps.find_deploy.outputs.deploy == 'docker'
+      #   id: build-image
+      #   env:
+      #     ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+      #     ECR_REPOSITORY: ${{ matrix.dir }}
+      #     IMAGE_TAG: ${{ github.sha }}
+      #   run: |
+      #     docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
+      #     docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+      #     echo "image=$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG" >> $GITHUB_OUTPUT
 
   deploy:
     needs:
@@ -117,45 +124,57 @@ jobs:
 
       - name: Download Artifact from Github
         uses: actions/download-artifact@v3
-        if: needs.build.outputs.deploy == 'direct'
-        id: function_code
+        id: method  
         with:
-          name: function_code_${{ matrix.dir }}
-
+          name: deploy_method_${{ matrix.dir }}
+      
       - name: Echo Artifact Path
-        if: needs.build.outputs.deploy == 'direct'
         run: |
-          echo "Artifact Path: ${{ steps.function_code.outputs.download-path }}"
+          echo "Artifact Path: ${{ steps.method.outputs.download-path }}"
           echo "All outputs: ${{ toJson(steps) }}"
 
-      - id: versions
-        env:
-          deploy: ${{ needs.build.outputs.deploy }}
-        run: |
-          echo "old_version=$(aws lambda get-alias --function-name ${{matrix.dir}} --name ${FUNCTION_ALIAS} --query FunctionVersion --output text)" >> $GITHUB_ENV
 
-          if [ "$deploy" = "direct" ]; then
-            new_version=$(aws lambda update-function-code --function-name ${{matrix.dir}} --zip-file fileb://${{ steps.function_code.outputs.download-path }}/${{matrix.dir}}.zip --publish --query Version --output text)
-          else
-            new_version=$(aws lambda update-function-code --function-name ${{matrix.dir}} --image-uri ${{ needs.build.outputs.image }} --publish --query Version --output text)
-          fi
-          echo "new_version=$new_version" >> $GITHUB_ENV
+      # - name: Download Artifact from Github
+      #   uses: actions/download-artifact@v3
+      #   if: needs.build.outputs.deploy == 'direct'
+      #   id: function_code
+      #   with:
+      #     name: function_code_${{ matrix.dir }}
 
-      - name: Generate JSON File for Deployment
-        run: |
-          cat <<EOF >deployment.json
-          {
-              "applicationName": "${CODEDEPLOY_APP}",
-              "deploymentGroupName": "${CODEDEPLOY_GROUP}-${{matrix.dir}}",
-              "revision": {
-                  "revisionType": "AppSpecContent",
-                  "appSpecContent": {
-                      "content": "{\"version\":0.0,\"Resources\":[{\"TargetService\":{\"Type\":\"AWS::Lambda::Function\",\"Properties\":{\"Name\":\"${{matrix.dir}}\",\"Alias\":\"live\",\"CurrentVersion\":\"${old_version}\",\"TargetVersion\":\"${new_version}\"}}}]}"
-                  }
-              }
-          }
-          EOF
-      - run: cat deployment.json
-      - name: Deploy
-        run: |
-          aws deploy create-deployment --cli-input-json file://deployment.json
+      # - name: Echo Artifact Path
+      #   if: needs.build.outputs.deploy == 'direct'
+      #   run: |
+      #     echo "Artifact Path: ${{ steps.function_code.outputs.download-path }}"
+      #     echo "All outputs: ${{ toJson(steps) }}"
+
+      # - id: versions
+      #   env:
+      #     deploy: ${{ needs.build.outputs.deploy }}
+      #   run: |
+      #     echo "old_version=$(aws lambda get-alias --function-name ${{matrix.dir}} --name ${FUNCTION_ALIAS} --query FunctionVersion --output text)" >> $GITHUB_ENV
+
+      #     if [ "$deploy" = "direct" ]; then
+      #       new_version=$(aws lambda update-function-code --function-name ${{matrix.dir}} --zip-file fileb://${{ steps.function_code.outputs.download-path }}/${{matrix.dir}}.zip --publish --query Version --output text)
+      #     else
+      #       new_version=$(aws lambda update-function-code --function-name ${{matrix.dir}} --image-uri ${{ needs.build.outputs.image }} --publish --query Version --output text)
+      #     fi
+      #     echo "new_version=$new_version" >> $GITHUB_ENV
+
+      # - name: Generate JSON File for Deployment
+      #   run: |
+      #     cat <<EOF >deployment.json
+      #     {
+      #         "applicationName": "${CODEDEPLOY_APP}",
+      #         "deploymentGroupName": "${CODEDEPLOY_GROUP}-${{matrix.dir}}",
+      #         "revision": {
+      #             "revisionType": "AppSpecContent",
+      #             "appSpecContent": {
+      #                 "content": "{\"version\":0.0,\"Resources\":[{\"TargetService\":{\"Type\":\"AWS::Lambda::Function\",\"Properties\":{\"Name\":\"${{matrix.dir}}\",\"Alias\":\"live\",\"CurrentVersion\":\"${old_version}\",\"TargetVersion\":\"${new_version}\"}}}]}"
+      #             }
+      #         }
+      #     }
+      #     EOF
+      # - run: cat deployment.json
+      # - name: Deploy
+      #   run: |
+      #     aws deploy create-deployment --cli-input-json file://deployment.json

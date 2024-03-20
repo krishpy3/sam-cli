@@ -60,10 +60,12 @@ jobs:
       #     name: function_code_${{ matrix.dir }}
       #     path: ${{ github.workspace }}/${{ matrix.dir }}.zip
       #     if-no-files-found: error
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
 
       - name: Login to Amazon ECR
         id: login-ecr
-        uses: aws-actions/amazon-ecr-login@62f4f872db3836360b72999f4b87f1ff13310f3a
+        uses: aws-actions/amazon-ecr-login@v2
 
       - name: Build and Push to Docker
         # if: steps.calc_size.outputs.size >= 250

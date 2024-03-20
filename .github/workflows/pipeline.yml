@@ -12,93 +12,116 @@ env:
   FUNCTION_ALIAS: live
 
 jobs:
-  test:
+  generate-matrix:
     runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.matrix.outputs.matrix }}
     steps:
-      - run: aws sts get-caller-identity
-  # generate-matrix:
-  #   runs-on: ubuntu-latest
-  #   outputs:
-  #     matrix: ${{ steps.matrix.outputs.matrix }}
-  #   steps:
-  #     - uses: actions/checkout@v4
-  #     - name: Generate matrix
-  #       id: matrix
-  #       uses: hellofresh/action-changed-files@v3
-  #       with:
-  #         pattern: "lambda/(?P<dir>[^/]+)"
-  #         default-patterns: |
-  #           '.github/workflows/**'
-  #     - name: Echo matrix
-  #       run: |
-  #         echo "Matrix: ${{ toJson(steps.matrix.outputs.matrix) }}"
+      - uses: actions/checkout@v4
+      - name: Generate matrix
+        id: matrix
+        uses: hellofresh/action-changed-files@v3
+        with:
+          pattern: "lambda/(?P<dir>[^/]+)"
+          default-patterns: |
+            '.github/workflows/**'
+      - name: Echo matrix
+        run: |
+          echo "Matrix: ${{ toJson(steps.matrix.outputs.matrix) }}"
 
-  # build:
-  #   needs: generate-matrix
-  #   runs-on: ubuntu-latest
-  #   if: needs.generate-matrix.outputs.matrix != '[]'
-  #   strategy:
-  #     matrix: ${{ fromJson(needs.generate-matrix.outputs.matrix) }}
-  #   defaults:
-  #     run:
-  #       working-directory: lambda/${{ matrix.dir }}
-  #   steps:
-  #     - uses: actions/checkout@v4
-  #     - name: Generate Lambda Zip File
-  #       run: |
-  #         zip -r ${{ github.workspace }}/${{ matrix.dir }}.zip .
+  build:
+    needs: generate-matrix
+    runs-on: ubuntu-latest
+    if: needs.generate-matrix.outputs.matrix != '[]'
+    strategy:
+      matrix: ${{ fromJson(needs.generate-matrix.outputs.matrix) }}
+    defaults:
+      run:
+        working-directory: lambda/${{ matrix.dir }}
+    outputs:
+      image: ${{ steps.build-image.outputs.image }}
+    steps:
+      - uses: actions/checkout@v4
 
-  #     - name: Upload Artifact to Github
-  #       uses: actions/upload-artifact@v3
-  #       with:
-  #         name: function_code_${{ matrix.dir }}
-  #         path: ${{ github.workspace }}/${{ matrix.dir }}.zip
-  #         if-no-files-found: error
+      - name: Calculate Directory Size
+        id: calc_size
+        run: |
+          SIZE=$(du -s --block-size=1M | cut -f1)
+          echo "Directory size: $SIZE MB"
+          echo "::set-output name=size::$SIZE"
 
-  # deploy:
-  #   needs:
-  #     - generate-matrix
-  #     - build
-  #   runs-on: ubuntu-latest
-  #   if: needs.generate-matrix.outputs.matrix != '[]'
-  #   strategy:
-  #     matrix: ${{ fromJson(needs.generate-matrix.outputs.matrix) }}
-  #   defaults:
-  #     run:
-  #       working-directory: lambda/${{ matrix.dir }}
-  #   steps:
-  #     - uses: actions/checkout@v4
-  #     - name: Download Artifact from Github
-  #       uses: actions/download-artifact@v3
-  #       id: function_code
-  #       with:
-  #         name: function_code_${{ matrix.dir }}
-  #     - name: Echo Artifact Path
-  #       run: |
-  #         echo "Artifact Path: ${{ steps.function_code.outputs.download-path }}"
-  #         echo "All outputs: ${{ toJson(steps) }}"
+      # - name: Generate Lambda Zip File
+      #   run: |
+      #     zip -r ${{ github.workspace }}/${{ matrix.dir }}.zip .
 
-  #     - id: versions
-  #       run: |
-  #         echo "old_version=$(aws lambda get-alias --function-name ${{matrix.dir}} --name ${FUNCTION_ALIAS} --query FunctionVersion --output text)" >> $GITHUB_ENV
+      # - name: Upload Artifact to Github
+      #   uses: actions/upload-artifact@v3
+      #   with:
+      #     name: function_code_${{ matrix.dir }}
+      #     path: ${{ github.workspace }}/${{ matrix.dir }}.zip
+      #     if-no-files-found: error
 
-  #         echo "new_version=$(aws lambda update-function-code --function-name ${{matrix.dir}} --zip-file fileb://${{ steps.function_code.outputs.download-path }}/${{matrix.dir}}.zip --publish --query Version --output text)" >> $GITHUB_ENV
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@62f4f872db3836360b72999f4b87f1ff13310f3a
 
-  #     - name: Generate JSON File for Deployment
-  #       run: |
-  #         cat <<EOF >deployment.json
-  #         {
-  #             "applicationName": "${CODEDEPLOY_APP}",
-  #             "deploymentGroupName": "${CODEDEPLOY_GROUP}-${{matrix.dir}}",
-  #             "revision": {
-  #                 "revisionType": "AppSpecContent",
-  #                 "appSpecContent": {
-  #                     "content": "{\"version\":0.0,\"Resources\":[{\"TargetService\":{\"Type\":\"AWS::Lambda::Function\",\"Properties\":{\"Name\":\"${{matrix.dir}}\",\"Alias\":\"live\",\"CurrentVersion\":\"${old_version}\",\"TargetVersion\":\"${new_version}\"}}}]}"
-  #                 }
-  #             }
-  #         }
-  #         EOF
-  #     - run: cat deployment.json
-  #     - name: Deploy
-  #       run: |
-  #         aws deploy create-deployment --cli-input-json file://deployment.json
+      - name: Build and Push to Docker
+        # if: steps.calc_size.outputs.size >= 250
+        id: build-image
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          IMAGE_TAG: ${{ github.sha }}
+        run: |
+          docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+          echo "image=$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG" >> $GITHUB_OUTPUT
+
+  deploy:
+    needs:
+      - generate-matrix
+      - build
+    runs-on: ubuntu-latest
+    if: needs.generate-matrix.outputs.matrix != '[]'
+    strategy:
+      matrix: ${{ fromJson(needs.generate-matrix.outputs.matrix) }}
+    defaults:
+      run:
+        working-directory: lambda/${{ matrix.dir }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Download Artifact from Github
+        uses: actions/download-artifact@v3
+        id: function_code
+        with:
+          name: function_code_${{ matrix.dir }}
+      - name: Echo Artifact Path
+        run: |
+          echo "Artifact Path: ${{ steps.function_code.outputs.download-path }}"
+          echo "All outputs: ${{ toJson(steps) }}"
+
+      - id: versions
+        run: |
+          echo "old_version=$(aws lambda get-alias --function-name ${{matrix.dir}} --name ${FUNCTION_ALIAS} --query FunctionVersion --output text)" >> $GITHUB_ENV
+
+          # echo "new_version=$(aws lambda update-function-code --function-name ${{matrix.dir}} --zip-file fileb://${{ steps.function_code.outputs.download-path }}/${{matrix.dir}}.zip --publish --query Version --output text)" >> $GITHUB_ENV
+
+          echo "new_version=$(aws lambda update-function-code --function-name ${{matrix.dir}} --image-uri ${{ needs.build.outputs.image }}/${{matrix.dir}} --publish --query Version --output text)" >> $GITHUB_ENV
+
+      - name: Generate JSON File for Deployment
+        run: |
+          cat <<EOF >deployment.json
+          {
+              "applicationName": "${CODEDEPLOY_APP}",
+              "deploymentGroupName": "${CODEDEPLOY_GROUP}-${{matrix.dir}}",
+              "revision": {
+                  "revisionType": "AppSpecContent",
+                  "appSpecContent": {
+                      "content": "{\"version\":0.0,\"Resources\":[{\"TargetService\":{\"Type\":\"AWS::Lambda::Function\",\"Properties\":{\"Name\":\"${{matrix.dir}}\",\"Alias\":\"live\",\"CurrentVersion\":\"${old_version}\",\"TargetVersion\":\"${new_version}\"}}}]}"
+                  }
+              }
+          }
+          EOF
+      - run: cat deployment.json
+      - name: Deploy
+        run: |
+          aws deploy create-deployment --cli-input-json file://deployment.json

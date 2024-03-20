@@ -94,21 +94,19 @@ jobs:
         working-directory: lambda/${{ matrix.dir }}
     steps:
       - uses: actions/checkout@v4
-      - name: Download Artifact from Github
-        uses: actions/download-artifact@v3
-        id: function_code
-        with:
-          name: function_code_${{ matrix.dir }}
-      - name: Echo Artifact Path
-        run: |
-          echo "Artifact Path: ${{ steps.function_code.outputs.download-path }}"
-          echo "All outputs: ${{ toJson(steps) }}"
+      # - name: Download Artifact from Github
+      #   uses: actions/download-artifact@v3
+      #   id: function_code
+      #   with:
+      #     name: function_code_${{ matrix.dir }}
+      # - name: Echo Artifact Path
+      #   run: |
+      #     echo "Artifact Path: ${{ steps.function_code.outputs.download-path }}"
+      #     echo "All outputs: ${{ toJson(steps) }}"
 
       - id: versions
         run: |
           echo "old_version=$(aws lambda get-alias --function-name ${{matrix.dir}} --name ${FUNCTION_ALIAS} --query FunctionVersion --output text)" >> $GITHUB_ENV
-
-          # echo "new_version=$(aws lambda update-function-code --function-name ${{matrix.dir}} --zip-file fileb://${{ steps.function_code.outputs.download-path }}/${{matrix.dir}}.zip --publish --query Version --output text)" >> $GITHUB_ENV
 
           echo "new_version=$(aws lambda update-function-code --function-name ${{matrix.dir}} --image-uri ${{ needs.build.outputs.image }}/${{matrix.dir}} --publish --query Version --output text)" >> $GITHUB_ENV
 

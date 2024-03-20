@@ -55,10 +55,11 @@ jobs:
           ls
           size=$(du -s --block-size=1M | cut -f1)
           if [ "${size}" -lt 250 ]; then
-            echo "deploy=direct" >> $GITHUB_OUTPUT
+            deploy=direct
           else
-            echo "deploy=docker" >> $GITHUB_OUTPUT
+            deploy=docker
           fi
+          echo "deploy=$deploy" >> $GITHUB_OUTPUT
           echo "${{matrix.dir}}-method=$deploy" >> $GITHUB_WORKSPACE/deploy_method.txt
           echo $GITHUB_WORKSPACE
           ls $GITHUB_WORKSPACE

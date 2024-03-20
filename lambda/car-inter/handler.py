@@ -36,7 +36,7 @@ def handler(event, context):
         print(f"Result1: {json.dumps(result)}")
         print(f"statusCode: {result['statusCode']}")
 
-        # Check if the status code returned by the updated function is 400
+        # Check if the status code returned by the updated function is400
         if result['statusCode'] != 400:
             print("Validation of time parameter succeeded.")
             lambda_result = "Succeeded"

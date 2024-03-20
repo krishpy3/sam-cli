@@ -1,2 +1,10 @@
 requests
-tensorflow
+django
+numpy
+pandas
+flask
+fastapi
+psycopg2-binary
+boto3
+selenium
+SQLAlchemy

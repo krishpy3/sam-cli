@@ -10,7 +10,7 @@ def handler(event, context):
     print("Entering PostTraffic Hook!")
     print(event)
     print(context)
-    # Read the DeploymentId and LifecycleEventHookExecutionId from the event payload
+    # Read th DeploymentId and LifecycleEventHookExecutionId from the event payload
     deployment_id = event['DeploymentId']
     lifecycle_event_hook_execution_id = event['LifecycleEventHookExecutionId']
 

@@ -62,7 +62,7 @@ jobs:
           echo "deploy=$deploy" >> $GITHUB_OUTPUT
           echo "$deploy" >> $GITHUB_WORKSPACE/deploy_method.txt
 
-      - name: Upload Artifact to Github
+      - name: Upload Configfile that contains deploy method
         uses: actions/upload-artifact@v4
         with:
           name: deploy_method_${{ matrix.dir }}
@@ -125,7 +125,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Download Artifact from Github
+      - name: Download Deployment method
         uses: actions/download-artifact@v4
         id: method  
         with:
@@ -141,7 +141,7 @@ jobs:
 
 
       - name: Download Artifact from Github
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         if: steps.deploy_type.outputs.deploy == 'direct'
         id: function_code
         with:

@@ -75,9 +75,9 @@ jobs:
         if: steps.find_deploy.outputs.deploy == 'direct'
         run: |
           cd ${{ github.workspace }}/package
-          zip -r ../my_deployment_package.zip .
+          zip -r ../${{ matrix.dir }}.zip .
           cd ${{ github.workspace }}
-          zip my_deployment_package.zip lambda/${{ matrix.dir }}/*
+          zip ${{ matrix.dir }}.zip lambda/${{ matrix.dir }}/*
 
       - name: Upload Artifact to Github
         if: steps.find_deploy.outputs.deploy == 'direct'
@@ -107,7 +107,7 @@ jobs:
           IMAGE_TAG: ${{ github.sha }}
         run: |
           cd ${{ github.workspace }}
-          docker build --build-arg FUNCTION_DIR=lambda/${{matrix.dir}} -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
+          docker build --build-arg FUNCTION_DIR=lambda/${{matrix.dir}} -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG -f ${{ github.workspace }}/Dockerfile 
           docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
           echo "image=$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG" >> $GITHUB_OUTPUT
 

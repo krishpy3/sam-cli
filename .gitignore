@@ -1,5 +1,9 @@
-
-
+.terraform/*
+.tmp/*
+terraform*
+.terraform*
+*.tf*
 .aws-sam
+deployment.json
 samconfig.toml
 target

@@ -1,0 +1,105 @@
+name: Common Subfolder CI
+
+on:
+  push:
+    paths:
+      - 'src/common/**'
+
+
+env:
+  AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+  AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+  AWS_DEFAULT_REGION: us-east-1
+  CODEDEPLOY_APP: MyLambdaCodeDeployApp
+  CODEDEPLOY_GROUP: MyLambdaDeploymentGroup
+  FUNCTION_ALIAS: live
+
+jobs:
+  generate-matrix:
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.set-matrix.outputs.matrix }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Generate matrix from subfolders, excluding 'common'
+        id: set-matrix
+        run: |
+          subfolders=$(ls -d lambda/* | xargs -n 1 basename | grep -v '^common$')
+          matrix="{\"include\": ["
+          for dir in $subfolders; do
+            matrix+="{\"subfolder\": \"$dir\"},"
+          done
+          matrix="${matrix%,}]}"
+          echo "::set-output name=matrix::$matrix"
+          echo "Matrix: $matrix"
+
+  build:
+    needs: generate-matrix
+    runs-on: ubuntu-latest
+    if: needs.generate-matrix.outputs.matrix != '[]'
+    strategy:
+      matrix: ${{ fromJson(needs.generate-matrix.outputs.matrix) }}
+    defaults:
+      run:
+        working-directory: src/${{ matrix.dir }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Generate Lambda Zip File
+        run: |
+          echo "${{ github.workspace }}/${{ matrix.dir }}"
+          # zip -r ${{ github.workspace }}/${{ matrix.dir }}.zip .
+
+      # - name: Upload Artifact to Github
+      #   uses: actions/upload-artifact@v3
+      #   with:
+      #     name: function_code_${{ matrix.dir }}
+      #     path: ${{ github.workspace }}/${{ matrix.dir }}.zip
+      #     if-no-files-found: error
+
+  # deploy:
+  #   needs:
+  #     - generate-matrix
+  #     - build
+  #   runs-on: ubuntu-latest
+  #   if: needs.generate-matrix.outputs.matrix != '[]'
+  #   strategy:
+  #     matrix: ${{ fromJson(needs.generate-matrix.outputs.matrix) }}
+  #   defaults:
+  #     run:
+  #       working-directory: src/${{ matrix.dir }}
+  #   steps:
+  #     - uses: actions/checkout@v4
+  #     - name: Download Artifact from Github
+  #       uses: actions/download-artifact@v3
+  #       id: function_code
+  #       with:
+  #         name: function_code_${{ matrix.dir }}
+  #     - name: Echo Artifact Path
+  #       run: |
+  #         echo "Artifact Path: ${{ steps.function_code.outputs.download-path }}"
+  #         echo "All outputs: ${{ toJson(steps) }}"
+
+  #     - id: versions
+  #       run: |
+  #         echo "old_version=$(aws lambda get-alias --function-name ${{matrix.dir}} --name ${FUNCTION_ALIAS} --query FunctionVersion --output text)" >> $GITHUB_ENV
+
+  #         echo "new_version=$(aws lambda update-function-code --function-name ${{matrix.dir}} --zip-file fileb://${{ steps.function_code.outputs.download-path }}/${{matrix.dir}}.zip --publish --query Version --output text)" >> $GITHUB_ENV
+
+  #     - name: Generate JSON File for Deployment
+  #       run: |
+  #         cat <<EOF >deployment.json
+  #         {
+  #             "applicationName": "${CODEDEPLOY_APP}",
+  #             "deploymentGroupName": "${CODEDEPLOY_GROUP}-${{matrix.dir}}",
+  #             "revision": {
+  #                 "revisionType": "AppSpecContent",
+  #                 "appSpecContent": {
+  #                     "content": "{\"version\":0.0,\"Resources\":[{\"TargetService\":{\"Type\":\"AWS::Lambda::Function\",\"Properties\":{\"Name\":\"${{matrix.dir}}\",\"Alias\":\"live\",\"CurrentVersion\":\"${old_version}\",\"TargetVersion\":\"${new_version}\"}}}]}"
+  #                 }
+  #             }
+  #         }
+  #         EOF
+  #     - run: cat deployment.json
+  #     - name: Deploy
+  #       run: |
+  #         aws deploy create-deployment --cli-input-json file://deployment.json

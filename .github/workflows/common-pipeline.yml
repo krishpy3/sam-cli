@@ -24,7 +24,7 @@ jobs:
       - name: Generate matrix from subfolders, excluding 'common'
         id: set-matrix
         run: |
-          subfolders=$(ls -d lambda/* | xargs -n 1 basename | grep -v '^common$')
+          subfolders=$(ls -d src/* | xargs -n 1 basename | grep -v '^common$')
           matrix="{\"include\": ["
           for dir in $subfolders; do
             matrix+="{\"subfolder\": \"$dir\"},"

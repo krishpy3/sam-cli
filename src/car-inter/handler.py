@@ -7,7 +7,7 @@ lambda_client = boto3.client('lambda')
 
 
 def handler(event, context):
-    print("Entering PostTraffic Hook!")
+    print("Entering PostTraffic Hook!!")
     print(event)
     print(context)
     # Read the DeploymentId and LifecycleEventHookExecutionId from the event payload

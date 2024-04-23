@@ -63,7 +63,7 @@ resource "aws_iam_role_policy_attachment" "lambda_attachment" {
 # Lambda function
 data "archive_file" "main_lambda_zip" {
   type        = "zip"
-  source_file = "lambda/car-data/index.py"
+  source_file = "src/car-data/index.py"
   output_path = ".tmp/car-data/index.zip"
 }
 resource "aws_lambda_function" "main_lambda" {
@@ -82,7 +82,7 @@ resource "aws_lambda_function" "main_lambda" {
 # Pre traffic hook
 data "archive_file" "pre_hook_zip" {
   type        = "zip"
-  source_file = "lambda/car-inter/handler.py"
+  source_file = "src/car-inter/handler.py"
   output_path = ".tmp/car-inter/handler.zip"
 }
 resource "aws_lambda_function" "pre_traffic_hook" {
@@ -100,7 +100,7 @@ resource "aws_lambda_function" "pre_traffic_hook" {
 # Post traffic hook
 data "archive_file" "post_hook_zip" {
   type        = "zip"
-  source_file = "lambda/third/beforeAllowTraffic.py"
+  source_file = "src/third/beforeAllowTraffic.py"
   output_path = ".tmp/third/beforeAllowTraffic.zip"
 }
 resource "aws_lambda_function" "post_traffic_hook" {

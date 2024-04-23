@@ -30,9 +30,7 @@ jobs:
             matrix+="{\"dir\": \"$dir\"},"
           done
           matrix="${matrix%,}]}"
-          echo "matrix=$matrix" >> $GITHUB_ENV
-          echo "Matrix: $matrix"
-
+          echo "matrix=$matrix" >> $GITHUB_OUTPUT
   build:
     needs: generate-matrix
     runs-on: ubuntu-latest

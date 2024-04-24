@@ -1,0 +1,105 @@
+name: Docker-Pipeline
+
+on:
+  push:
+    paths:
+      - 'src/**'
+
+env:
+  AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+  AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+  AWS_DEFAULT_REGION: us-east-1
+  CODEDEPLOY_APP: MyLambdaCodeDeployApp
+  CODEDEPLOY_GROUP: MyLambdaDeploymentGroup
+  FUNCTION_ALIAS: live
+
+jobs:
+  generate-matrix:
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.matrix.outputs.matrix }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Generate matrix
+        id: matrix
+        uses: hellofresh/action-changed-files@v3
+        with:
+          pattern: "src/(?P<dir>[^/]+)"
+          default-patterns: |
+            '.github/workflows/**'
+      - name: Echo matrix
+        run: |
+          echo "Matrix: ${{ toJson(steps.matrix.outputs.matrix) }}"
+
+  build:
+    needs: generate-matrix
+    runs-on: ubuntu-latest
+    if: needs.generate-matrix.outputs.matrix != '[]'
+    strategy:
+      matrix: ${{ fromJson(needs.generate-matrix.outputs.matrix) }}
+    defaults:
+      run:
+        working-directory: src/${{ matrix.dir }}
+    outputs:
+      image: ${{ steps.build-image.outputs.image }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-region: us-east-1
+
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Build and Push to Docker
+        id: build-image
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          ECR_REPOSITORY: ${{ matrix.dir }}
+          IMAGE_TAG: ${{ github.sha }}
+        run: |
+          cd ${{ github.workspace }}
+          docker build --build-arg FUNCTION_DIR=src/${{matrix.dir}} -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+          echo "image=$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG" >> $GITHUB_OUTPUT
+
+  deploy:
+    needs:
+      - generate-matrix
+      - build
+    runs-on: ubuntu-latest
+    if: needs.generate-matrix.outputs.matrix != '[]'
+    strategy:
+      matrix: ${{ fromJson(needs.generate-matrix.outputs.matrix) }}
+    defaults:
+      run:
+        working-directory: src/${{ matrix.dir }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - id: versions
+        run: |
+          echo "old_version=$(aws lambda get-alias --function-name ${{matrix.dir}} --name ${FUNCTION_ALIAS} --query FunctionVersion --output text)" >> $GITHUB_ENV
+          echo "new_version=$(aws lambda update-function-code --function-name ${{matrix.dir}} --image-uri ${{ needs.build.outputs.image }} --publish --query Version --output text)" >> $GITHUB_ENV
+
+      - name: Generate JSON File for Deployment
+        run: |
+          cat <<EOF >deployment.json
+          {
+              "applicationName": "${CODEDEPLOY_APP}",
+              "deploymentGroupName": "${CODEDEPLOY_GROUP}-${{matrix.dir}}",
+              "revision": {
+                  "revisionType": "AppSpecContent",
+                  "appSpecContent": {
+                      "content": "{\"version\":0.0,\"Resources\":[{\"TargetService\":{\"Type\":\"AWS::Lambda::Function\",\"Properties\":{\"Name\":\"${{matrix.dir}}\",\"Alias\":\"live\",\"CurrentVersion\":\"${old_version}\",\"TargetVersion\":\"${new_version}\"}}}]}"
+                  }
+              }
+          }
+          EOF
+      - run: cat deployment.json
+      - name: Deploy
+        run: |
+          aws deploy create-deployment --cli-input-json file://deployment.json

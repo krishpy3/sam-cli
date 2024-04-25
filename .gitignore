@@ -2,6 +2,7 @@
 .tmp/
 *terraform*
 *.tf?
+*.json
 .aws-sam
 samconfig.toml
 target

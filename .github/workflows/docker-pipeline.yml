@@ -31,7 +31,7 @@ jobs:
         run: |
           echo "Matrix: ${{ toJson(steps.matrix.outputs.matrix) }}"
 
-  build:
+  build-deploy:
     needs: generate-matrix
     runs-on: ubuntu-latest
     if: needs.generate-matrix.outputs.matrix != '[]'
@@ -41,7 +41,7 @@ jobs:
       run:
         working-directory: src/${{ matrix.dir }}
     outputs:
-      image: ${{ steps.build-image.outputs.image }}
+      image: ${{ steps.build-image.outputs.imageid }}
     steps:
       - uses: actions/checkout@v4
 
@@ -56,34 +56,17 @@ jobs:
 
       - name: Build and Push to Docker
         id: build-image
-        env:
-          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
-          ECR_REPOSITORY: ${{ matrix.dir }}
-          IMAGE_TAG: ${{ github.sha }}
-        run: |
-          cd ${{ github.workspace }}
-          docker build --build-arg FUNCTION_DIR=src/${{matrix.dir}} -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
-          docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
-          echo "image=$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG" >> $GITHUB_OUTPUT
-
-  deploy:
-    needs:
-      - generate-matrix
-      - build
-    runs-on: ubuntu-latest
-    if: needs.generate-matrix.outputs.matrix != '[]'
-    strategy:
-      matrix: ${{ fromJson(needs.generate-matrix.outputs.matrix) }}
-    defaults:
-      run:
-        working-directory: src/${{ matrix.dir }}
-    steps:
-      - uses: actions/checkout@v4
+        uses: docker/build-push-action@v5
+        with:
+          push: true
+          tags: "${{ steps.login-ecr.outputs.registry }}:${{ github.sha }}"
+          context: "."
+          build-args: "FUNCTION_DIR=src/${{matrix.dir}}"
 
       - id: versions
         run: |
           echo "old_version=$(aws lambda get-alias --function-name ${{matrix.dir}} --name ${FUNCTION_ALIAS} --query FunctionVersion --output text)" >> $GITHUB_ENV
-          echo "new_version=$(aws lambda update-function-code --function-name ${{matrix.dir}} --image-uri ${{ needs.build.outputs.image }} --publish --query Version --output text)" >> $GITHUB_ENV
+          echo "new_version=$(aws lambda update-function-code --function-name ${{matrix.dir}} --image-uri ${{ steps.build-image.outputs.imageid }} --publish --query Version --output text)" >> $GITHUB_ENV
 
       - name: Generate JSON File for Deployment
         run: |

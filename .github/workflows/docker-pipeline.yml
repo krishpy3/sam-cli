@@ -40,8 +40,6 @@ jobs:
     defaults:
       run:
         working-directory: src/${{ matrix.dir }}
-    outputs:
-      image: ${{ steps.build-image.outputs.imageid }}
     steps:
       - uses: actions/checkout@v4
 
@@ -66,7 +64,7 @@ jobs:
       - id: versions
         run: |
           echo "old_version=$(aws lambda get-alias --function-name ${{matrix.dir}} --name ${FUNCTION_ALIAS} --query FunctionVersion --output text)" >> $GITHUB_ENV
-          echo "new_version=$(aws lambda update-function-code --function-name ${{matrix.dir}} --image-uri ${{ steps.build-image.outputs.imageid }} --publish --query Version --output text)" >> $GITHUB_ENV
+          echo "new_version=$(aws lambda update-function-code --function-name ${{matrix.dir}} --image-uri ${{ steps.login-ecr.outputs.registry }}/${{matrix.dir}}:${{ github.sha }} --publish --query Version --output text)" >> $GITHUB_ENV
 
       - name: Generate JSON File for Deployment
         run: |

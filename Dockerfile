@@ -1,10 +1,10 @@
-FROM public.ecr.aws/lambda/python:3.9
+FROM python:3.12-slim
 
 ARG FUNCTION_DIR
+ARG FUNCTION_DIR2
 
-COPY ${FUNCTION_DIR}/requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+COPY ${FUNCTION_DIR}/abc.txt .
+COPY ${FUNCTION_DIR2}/abc.txt c.txt
+COPY app.py .
 
-COPY ${FUNCTION_DIR}/app.py .
-
-CMD ["app.lambda_handler"]
+CMD ["python", "app.py", "${FUNCTION_DIR}", "${FUNCTION_DIR2}"]

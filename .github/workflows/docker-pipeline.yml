@@ -32,7 +32,7 @@ jobs:
           context: "."
           build-args: |
             FUNCTION_DIR=a
-            FUNCTION_DIR2=b
+            TOKEN=${{ secrets.GITHUB_TOKEN }}
 
       - id: versions
         run: |

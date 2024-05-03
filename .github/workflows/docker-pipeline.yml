@@ -30,7 +30,9 @@ jobs:
           push: true
           tags: "${{ steps.login-ecr.outputs.registry }}/new:${{ github.sha }}"
           context: "."
-          build-args: "FUNCTION_DIR=a,FUNCTION_DIR2=b"
+          build-args: |
+            FUNCTION_DIR=a
+            FUNCTION_DIR2=b
 
       - id: versions
         run: |
